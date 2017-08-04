@@ -31,7 +31,8 @@ PyTester是一个股票策略回测的平台.
 
 1. 鼠标移致顶部会出现:<br>
     运行, 保存, 打开, 批量计算, 批量结果, 后台输出, 代码视图切换.
-![](/images/menu.jpg "图标")  
+
+![](/images/menu.jpg)
 2. 移出顶部后,消失.
 
 
@@ -41,11 +42,14 @@ PyTester是一个股票策略回测的平台.
 ```
 show=MA(68)
 ```
+
+![](/images/show_ma_68.jpg)
 2. 画出收盘价与均线的差值(在第二窗口)
 ```
 df = make(CLOSE() - MA(68))
 show=None, df
 ```
+![](/images/close_ma68.png)
 3. 再画出差值的均线.(在第二窗口)
 ```
 df = make(CLOSE() - MA(68))
