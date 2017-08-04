@@ -49,7 +49,7 @@ show=MA(68)
 df = make(CLOSE() - MA(68))
 show=None, df
 ```
-![](/images/close_ma68.png)
+![](/images/close_ma68.jpg)
 3. 再画出差值的均线.(在第二窗口)
 ```
 df = make(CLOSE() - MA(68))
