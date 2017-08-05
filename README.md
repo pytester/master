@@ -53,14 +53,14 @@ PyTester是一个股票策略回测的平台.
 ## 策略
 ### 示例
 1. 画出收盘价的均线
-```
+```python
 show=MA(68)
 ```
 
 ![](/images/show_ma_68.jpg)
 
 2. 画出收盘价与均线的差值(在第二窗口)
-```
+```python
 df = make(CLOSE() - MA(68))
 show=None, df
 ```
@@ -68,7 +68,7 @@ show=None, df
 ![](/images/close_ma68.jpg)
 
 3. 再画出差值的均线.(在第二窗口)
-```
+```python
 df = make(CLOSE() - MA(68))
 show=None, (df, df.MA(68))
 ```
@@ -79,7 +79,7 @@ show=None, (df, df.MA(68))
     注:
         这里并不是以开盘,收盘价计算的KDJ.
 
-```
+```python
 df = make(CLOSE() - MA(68))
 show=None, (df, df.MA(68)), (df.K(300, 50), df.D(300, 50, 20), df.J(300, 50, 20))
 ```
@@ -95,7 +95,7 @@ show=None, (df, df.MA(68)), (df.K(300, 50), df.D(300, 50, 20), df.J(300, 50, 20)
 >下图参数代码与参数框对应关系:<br>
 
 * 代码格式如下:
-```Python
+```python
 N = 68; M1 = 12#@策略名称,默认周期
 ```
 
@@ -161,7 +161,7 @@ def onTick():
 ### show
 
 若希望网页上, 画一些指标作为参考. 用
-```
+```python
 show = A, B, ... 
 ```
 来显示各种指标.
@@ -172,11 +172,11 @@ show = A, B, ...
     2. 最后面的图像,为总资变化率.
 
 * 格式:<br>
-```
+```python
 show=(第一窗口的指标), (第二窗口的指标), ...
 ```
 * 例:<br>
-```
+```python
 N=68;M1=20
 ma   = MA(N)
 ema = EMA(N)
@@ -203,7 +203,7 @@ show=None, (k, 50)
 
 假设周期为天.<br>
 * 如:
-```
+```python
  ma = MA()
 ```
 
@@ -222,7 +222,7 @@ show=None, (k, 50)
 #### KDJ
 参数为N, M1, M2的KDJ 由几条指标线组成.<br>
 第二窗口画出KDJ:<br>
-```
+```python
 N=68;M1=12;M2=12;
 show=None,(\
 K(N, M1),
@@ -232,12 +232,12 @@ K(N, M1),
 ```
 #### MA
 画出收盘价的移动平均线:
-```
+```python
 show=MA(64)
 ```
 
 画出基于开盘价的移动平均线:
-```
+```python
 o= OPEN()
 show=o.MA(64)
 ```
@@ -245,12 +245,12 @@ show=o.MA(64)
 #### EMA
 
 画出收盘价的指数移动平均线:
-```
+```python
 show= EMA(64)
 ```
 
 画出基于成交量的指数移动平均线：
-```
+```python
 vol = VOL()
 ema=vol.EMA(64)
 show=None,(vol, ema)
@@ -260,7 +260,7 @@ show=None,(vol, ema)
 其中, MA为均线, STD为标准差.<br>
 
 例:
-```
+```python
 #在第一窗口画出参数为Ｎ的布林线:
 N=64
 mid=MA(N)                   # 中线
@@ -273,7 +273,7 @@ show=(up, mid, down),          # 注意,最后有个逗号, 这是python元组�
 #### 组合指标 - make
 由多个指标用四则混合运算组合成新指标．用make组合完成.<br>
 如上面的布林带.<br>
-```
+```python
 up=make(MA(N)+STD(N) * 2)    #上线(组合而成的指标)
 ```
 up为生成的新指标
@@ -289,7 +289,7 @@ up为生成的新指标
         ind.append(x)   # 添加数据
 
 例:<br>
-```
+```python
 #计算收盘价与均线的差值
 ind  = make()       #用户定义指标初始化.
 ma = ind.MA(68)     # 基于自定义指标为数据源, 计算均线.
@@ -305,7 +305,7 @@ show=None, (ind, ma)
 如果您希望在某个指标上的某个位置画一个标记．ind.show()帮您完成．<br>
 
 * 函数用法:<br>
-```
+```python
 ma=MA(68)
 def onTick():
     …
@@ -334,7 +334,7 @@ def onTick():
     ma.show(‘B-‘)   => 加粗的蓝色线段
 
 一个比较完整的图象:<br>
-```
+```python
 from  ilib import over
 k = K(200, 50)
 def onTick():
