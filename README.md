@@ -86,10 +86,14 @@ show=None, (df, df.MA(68)), (df.K(300, 50), df.D(300, 50, 20), df.J(300, 50, 20)
 N = 68; M1 = 12#@策略名称,默认周期
 ```
 
-### 周期:
-* H1=> Hour, 小时
-* D1 => Day, 天
-* W1=> Week, 周
+* 周期:
+    * H1=> Hour, 小时
+    * D1 => Day, 天
+    * W1=> Week, 周
+* 例:<br>
+    * N=68; M1=12#@策略名称,D1
+    * 运行时,弹出对话框
+![](/images/run_setting.jpg)
 
 ### onTick() 
 
