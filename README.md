@@ -122,7 +122,7 @@ N = 68; M1 = 12#@策略名称,默认周期
 ![](/images/run_setting.jpg)
 
 ---
-### onTick
+### onTick()
 
 以上示例中并没涉及买卖的动作.<br>
 当您需要买入或卖出. 可把这些操作放到onTick()里面.<br>
@@ -174,7 +174,7 @@ def onTick():
     其中参数[1], 参数[2]对应输入参数N和M1.
 
 ---
-### show
+### show()
 
 若您希望网页上, 画一些指标作为参考. <br>
 可使用如下:<br>
@@ -322,7 +322,7 @@ show=None, (ind, ma)
 
 ![](/images/usr_df_ma.jpg)
 
-#### 指标.show
+#### 指标.show()
 如果您希望在某个指标上的某个位置画一些标记．ind.show()帮您完成．<br>
 
 * 函数用法:<br>
@@ -417,7 +417,7 @@ def onTick():
 
 ### help()
 
-    *帮助信息<br>
+*帮助信息<br>
     help()      -> 输出当前支持的指标<br>
     help(MA)    -> 查看MA用法<br>
     help(make)  -> 查看make用法<br>
