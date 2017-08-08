@@ -422,6 +422,8 @@ def onTick():
 show = None, k
 ```
 
+![](/images/show_demo.jpg)
+
 ## 其它
 ---
 ### 全局变量g
