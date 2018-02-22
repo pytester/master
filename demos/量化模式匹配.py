@@ -42,20 +42,48 @@ class DATA:
         plt.plot(self.c)
         plt.plot(self.ma20)
         plt.show()
+class Pattern:
+    def __init__(self, c_len, v_len):
+        self.c_len = c_len              # close length
+        self.v_len = v_len              # volume length
+        self.t_len = c_len + v_len + 1  # total length
+        self.data = []
+    def add_one(self, c, v, ret):
+        #if len(c) != self.c_len or len(v) != self.v_len:
+        self.data.append((c[-self.c_len:], v[-self.v_len:], ret))
+    def mk_numpy(self):
+        col_len = self.c_len + self.c_len / 2 + self.c_len / 4
+        row_len = len(self.data)
+        np_array = np.zeros((row_len, col_len))
+        for i in xrange(0, row_len):
+            np_array[i, :self.c_len] = self.data[i][0]
+        pass
+    def mk_network(self):
+        pass
+    #定义隐藏层  
+    def normal_layer(inputs, in_size, out_size, activation_function=None):  
+        #Weights=tf.Variable(tf.zeros([in_size, out_size]))  #权值  
+        Weights=tf.Variable(tf.fill([in_size, out_size], 1 / in_size))  #权值  
+        #Weights=tf.Variable(tf.random_normal([in_size,out_size]))  #权值  
+        #Weights=tf.Variable(tf.ones([in_size,out_size])*0.1)  #权值  
+        biases=tf.Variable(tf.zeros([1, out_size]))# + 0.1) #偏置  
+        Wx_plus_b=tf.matmul(inputs, Weights) + biases  #z=wx+b  
+        if activation_function is None:  
+            outputs=Wx_plus_b  
+        else:  
+            outputs=activation_function(Wx_plus_b)  
+        return outputs, Weights, biases
+        
+    def square_layer(inputs, in_size, out_size):  
+        #a=tf.Variable(tf.random_normal([1, in_size]))
+        b=tf.Variable(tf.ones([1, in_size]) * 0.5)
+        #c=tf.ones([1, in_size])
 
-#定义隐藏层  
-def add_normal_layer(inputs, in_size, out_size, activation_function=None):  
-    #Weights=tf.Variable(tf.zeros([in_size, out_size]))  #权值  
-    Weights=tf.Variable(tf.fill([in_size, out_size], 1 / in_size))  #权值  
-    #Weights=tf.Variable(tf.random_normal([in_size,out_size]))  #权值  
-    #Weights=tf.Variable(tf.ones([in_size,out_size])*0.1)  #权值  
-    biases=tf.Variable(tf.zeros([1, out_size]))# + 0.1) #偏置  
-    Wx_plus_b=tf.matmul(inputs, Weights) + biases  #z=wx+b  
-    if activation_function is None:  
-        outputs=Wx_plus_b  
-    else:  
-        outputs=activation_function(Wx_plus_b)  
-    return outputs, Weights, biases
+        f = 1 - tf.square(inputs - b)
+
+        return tf.matmul(tf.nn.relu(f), tf.ones([in_size, out_size])), b
+
+
 
 if __name__ == '__main__':
     #make up some real data  
