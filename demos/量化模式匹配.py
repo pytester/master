@@ -43,23 +43,44 @@ class DATA:
         plt.plot(self.ma20)
         plt.show()
 class Pattern:
-    def __init__(self, c_len, v_len):
-        self.c_len = c_len              # close length
-        self.v_len = v_len              # volume length
-        self.t_len = c_len + v_len + 1  # total length
+    in_muti = 3
+    def __init__(self, c_len):
+        self.in_len = []
+        self.c_len = c_len
+        min_len = float(c_len)
+        while min_len > self.in_muti * 3:
+            self.in_len.append(int(min_len))              # close length
+            min_len = min_len / self.in_muti
+        self.col_len = sum(self.in_len) * 2  # np_data colume length
         self.data = []
-    def add_one(self, c, v, ret):
+        self.np_data = None
+        self.np_ret  = None
+    def append_data(self, c, v, ret):
         #if len(c) != self.c_len or len(v) != self.v_len:
-        self.data.append((c[-self.c_len:], v[-self.v_len:], ret))
+        self.data.append((c[-self.c_len:], v[-self.c_len:], ret))
     def mk_numpy(self):
-        col_len = self.c_len + self.c_len / 2 + self.c_len / 4
+        col_len = self.col_len
         row_len = len(self.data)
-        np_array = np.zeros((row_len, col_len))
+        np_data = np.zeros((row_len, col_len))
+        np_ret  = np.zeros((row_len, 2))
         for i in xrange(0, row_len):
-            np_array[i, :self.c_len] = self.data[i][0]
-        pass
+            idx = 0
+            for min_len in self.in_len:
+                np_data[i, idx:(idx + min_len)] = self.data[i][0][-min_len:]
+                idx1 = idx + int(col_len / 2)
+                np_data[i, idx1:(idx1 + min_len)] = self.data[i][1][-min_len:]
+                idx += min_len
+            ret = self.data[i][2]
+            if ret > 0:
+                np_ret[i, 0] = 1
+            elif ret < 0:
+                np_ret[i, 1] = 1
+        self.np_data = np_data
+        self.np_ret  = np_ret
+
     def mk_network(self):
-        pass
+        xs=tf.placeholder(tf.float32, [None, self.col_len], name = 'xs')
+        
     #定义隐藏层  
     def normal_layer(inputs, in_size, out_size, activation_function=None):  
         #Weights=tf.Variable(tf.zeros([in_size, out_size]))  #权值  
@@ -68,20 +89,20 @@ class Pattern:
         #Weights=tf.Variable(tf.ones([in_size,out_size])*0.1)  #权值  
         biases=tf.Variable(tf.zeros([1, out_size]))# + 0.1) #偏置  
         Wx_plus_b=tf.matmul(inputs, Weights) + biases  #z=wx+b  
-        if activation_function is None:  
+        if activation_function is None:
             outputs=Wx_plus_b  
         else:  
             outputs=activation_function(Wx_plus_b)  
         return outputs, Weights, biases
         
-    def square_layer(inputs, in_size, out_size):  
+    def pattern_layer(inputs, in_size, out_size):  
         #a=tf.Variable(tf.random_normal([1, in_size]))
         b=tf.Variable(tf.ones([1, in_size]) * 0.5)
         #c=tf.ones([1, in_size])
 
         f = 1 - tf.square(inputs - b)
 
-        return tf.matmul(tf.nn.relu(f), tf.ones([in_size, out_size])), b
+        return tf.matmul(tf.nn.relu(f), tf.ones([in_size, out_size]))
 
 
 
