@@ -152,6 +152,10 @@ class PatternNetwork:
         loss = sess.run(self.loss,feed_dict = {'np_data': self.np_data, 'np_ret': self.np_ret}) #输出误差  
         return loss
 
+def MA(data, N):
+    
+class PatternSaver:
+    pass
 if __name__ == '__main__':
     #make up some real data  
     data = DATA()
