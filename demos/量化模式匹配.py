@@ -51,7 +51,6 @@ class Pattern:
         while min_len > self.in_muti * 3:
             self.in_len.append(int(min_len))              # close length
             min_len = min_len / self.in_muti
-        self.col_len = sum(self.in_len) * 2  # np_data colume length
         self.data = []
         self.np_data = None
         self.np_ret  = None
@@ -59,7 +58,7 @@ class Pattern:
         #if len(c) != self.c_len or len(v) != self.v_len:
         self.data.append((c[-self.c_len:], v[-self.c_len:], ret))
     def mk_numpy(self):
-        col_len = self.col_len
+        col_len = sum(self.in_len) * 2  # np_data colume length
         row_len = len(self.data)
         np_data = np.zeros((row_len, col_len))
         np_ret  = np.zeros((row_len, 2))
@@ -79,32 +78,49 @@ class Pattern:
         self.np_ret  = np_ret
 
     def mk_network(self):
-        xs=tf.placeholder(tf.float32, [None, self.col_len], name = 'xs')
-        
-    #定义隐藏层  
-    def normal_layer(inputs, in_size, out_size, activation_function=None):  
-        #Weights=tf.Variable(tf.zeros([in_size, out_size]))  #权值  
-        Weights=tf.Variable(tf.fill([in_size, out_size], 1 / in_size))  #权值  
-        #Weights=tf.Variable(tf.random_normal([in_size,out_size]))  #权值  
-        #Weights=tf.Variable(tf.ones([in_size,out_size])*0.1)  #权值  
-        biases=tf.Variable(tf.zeros([1, out_size]))# + 0.1) #偏置  
+        self.np_ret_holder = tf.placeholder(tf.float32, [None, self.np_ret.shape[1]], name = 'np_ret')
+        self.np_data_holder = tf.placeholder(tf.float32, [None, self.np_data.shape[1]], name = 'np_data')
+        pattern_layer  = self.pattern_layer(self.np_data_holder, self.np_data)
+        middle_layer_len = self.np_data.shape[0]
+        middle_layer   = self.normal_layer(pattern_layer, 
+                                            self.np_data.shape[0], 
+                                            middle_layer_len, 
+                                            tf.nn.relu)
+        out_layer      = self.normal_layer(middle_layer, middle_layer_len, self.np_ret.shape[1], tf.nn.sigmoid)
+        return out_layer, self.np_ret_holder
+    #定义隐藏层
+    @staticmethod
+    def normal_layer(inputs, in_len, out_len, activation_function=None):  
+        #Weights=tf.Variable(tf.zeros([in_len, out_len]))  #权值  
+        Weights=tf.Variable(tf.fill([in_len, out_len], 1 / in_len))  #权值  
+        #Weights=tf.Variable(tf.random_normal([in_len,out_len]))  #权值  
+        #Weights=tf.Variable(tf.ones([in_len,out_len])*0.1)  #权值  
+        biases=tf.Variable(tf.zeros([1, out_len]))# + 0.1) #偏置  
         Wx_plus_b=tf.matmul(inputs, Weights) + biases  #z=wx+b  
         if activation_function is None:
             outputs=Wx_plus_b  
         else:  
             outputs=activation_function(Wx_plus_b)  
-        return outputs, Weights, biases
-        
-    def pattern_layer(inputs, in_size, out_size):  
-        #a=tf.Variable(tf.random_normal([1, in_size]))
-        b=tf.Variable(tf.ones([1, in_size]) * 0.5)
-        #c=tf.ones([1, in_size])
+        return outputs
+    
+    # 返回行数为:1, 列数为:len(self.np_data) 的数组
+    @staticmethod
+    def pattern_layer(inputs, np_data):  
+        distance = tf.square(inputs - tf.constant(np_data))
 
-        f = 1 - tf.square(inputs - b)
+        return tf.transpose(tf.matmul(distance, tf.ones([np_data.shape[1], 1])))
 
-        return tf.matmul(tf.nn.relu(f), tf.ones([in_size, out_size]))
-
-
+    def tf_init(self):
+        train_step=tf.train.GradientDescentOptimizer(0.1).minimize(loss)#梯度下降优化器,减少误差，学习效率0.1  
+          
+        #important step  
+        init=tf.global_variables_initializer()  
+        sess=tf.Session()  
+        sess.run(init) 
+    def run(self):
+        out_layer, np_ret_holder = self.mk_network()
+        loss=tf.reduce_mean(tf.reduce_sum(tf.square(np_ret_holder - out_layer),  
+                   reduction_indices=[1]))
 
 if __name__ == '__main__':
     #make up some real data  
@@ -136,7 +152,7 @@ if __name__ == '__main__':
     xs=tf.placeholder(tf.float32,[None, size[0][0]], name = 'xs')
 
     ###建立第一,二次隐藏层layer  
-    ###add_layer(inputs,in_size,out_size,activation_function=None)
+    ###add_layer(inputs,in_len,out_len,activation_function=None)
     l1_mtx = []
     l1_cnt = 0
     for sz in size:#[-sz[0]:]
