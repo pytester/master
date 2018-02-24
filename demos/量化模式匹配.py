@@ -42,55 +42,65 @@ class DATA:
         plt.plot(self.c)
         plt.plot(self.ma20)
         plt.show()
-class Pattern:
+class PatternNetwork:
+
     in_muti = 3
-    def __init__(self, c_len):
-        self.in_len = []
+    def __init__(self, c_len):# c_len = 243 => 3 ^ 5
+        self.seg_lens = []
         self.c_len = c_len
-        min_len = float(c_len)
-        while min_len > self.in_muti * 3:
-            self.in_len.append(int(min_len))              # close length
-            min_len = min_len / self.in_muti
+        seg_len = float(c_len)
+        # 3^4, 3^3, 3^2
+        while seg_len > self.in_muti * 3:
+            self.seg_lens.append(int(seg_len))              # close length
+            seg_len = seg_len / self.in_muti
         self.data = []
+        self.mark = []
         self.np_data = None
         self.np_ret  = None
-    def append_data(self, c, v, ret):
+    # ret: 1, 0, -1
+    def append_data(self, c, v, ret, mark):
         #if len(c) != self.c_len or len(v) != self.v_len:
         self.data.append((c[-self.c_len:], v[-self.c_len:], ret))
+        self.mark.append(mark)
+    def get_mark(self, idx):
+        return self.mark[idx]
     def mk_numpy(self):
-        col_len = sum(self.in_len) * 2  # np_data colume length
+        col_len = sum(self.seg_lens)  # np_data colume length
         row_len = len(self.data)
-        np_data = np.zeros((row_len, col_len))
+        np_data = np.zeros((row_len, col_len * 2))
         np_ret  = np.zeros((row_len, 2))
         for i in xrange(0, row_len):
             idx = 0
-            for min_len in self.in_len:
-                np_data[i, idx:(idx + min_len)] = self.data[i][0][-min_len:]
-                idx1 = idx + int(col_len / 2)
-                np_data[i, idx1:(idx1 + min_len)] = self.data[i][1][-min_len:]
-                idx += min_len
+            for seg_len in self.seg_lens:
+                np_data[i, idx:(idx + seg_len)] = self.data[i][0][-seg_len:]
+                idx1 = idx + col_len
+                np_data[i, idx1:(idx1 + seg_len)] = self.data[i][1][-seg_len:]
+                idx += seg_len
             ret = self.data[i][2]
             if ret > 0:
                 np_ret[i, 0] = 1
             elif ret < 0:
                 np_ret[i, 1] = 1
+        # np_data 行为样本的数目,列为一个样本的长度
         self.np_data = np_data
         self.np_ret  = np_ret
 
     def mk_network(self):
-        self.np_ret_holder = tf.placeholder(tf.float32, [None, self.np_ret.shape[1]], name = 'np_ret')
-        self.np_data_holder = tf.placeholder(tf.float32, [None, self.np_data.shape[1]], name = 'np_data')
-        pattern_layer  = self.pattern_layer(self.np_data_holder, self.np_data)
-        middle_layer_len = self.np_data.shape[0]
+
+        np_data_holder = tf.placeholder(tf.float32, [None, self.np_data.shape[1]], name = 'np_data')
+        # 一维数组, 长度是len(np_data) * 周期数 * 2
+        pattern_layer  = self.pattern_layer(np_data_holder, self.np_data)
+        # 3倍数量中间层
+        middle_layer_len = int(pattern_layer.shape[1]) * 3
         middle_layer   = self.normal_layer(pattern_layer, 
-                                            self.np_data.shape[0], 
                                             middle_layer_len, 
-                                            tf.nn.relu)
-        out_layer      = self.normal_layer(middle_layer, middle_layer_len, self.np_ret.shape[1], tf.nn.sigmoid)
-        return out_layer, self.np_ret_holder
+                                            tf.nn.sigmoid)
+        out_layer      = self.normal_layer(middle_layer, self.np_ret.shape[1], tf.nn.sigmoid)
+        return np_data_holder, out_layer
     #定义隐藏层
     @staticmethod
-    def normal_layer(inputs, in_len, out_len, activation_function=None):  
+    def normal_layer(inputs, out_len, activation_function=None):
+        in_len = int(inputs.shape[1])
         #Weights=tf.Variable(tf.zeros([in_len, out_len]))  #权值  
         Weights=tf.Variable(tf.fill([in_len, out_len], 1 / in_len))  #权值  
         #Weights=tf.Variable(tf.random_normal([in_len,out_len]))  #权值  
@@ -103,24 +113,44 @@ class Pattern:
             outputs=activation_function(Wx_plus_b)  
         return outputs
     
-    # 返回行数为:1, 列数为:len(self.np_data) 的数组
+    # 返回行数为:1, 列数为:len(self.np_data) * len(self.in_sigm_len) * 2的数组
+    # 因为每行np_data, 由不同周期的数据组成, 并且包含close与vol
+    # 1 - sum((x-w)^2, ...) / seg_len, 1是可变变量
     @staticmethod
-    def pattern_layer(inputs, np_data):  
+    def pattern_layer(inputs, np_data):
         distance = tf.square(inputs - tf.constant(np_data))
+        # 每个分块分开计算
+        sum_matrix = np.zeros([np_data.shape[1], len(self.seg_lens) * 2])
+        seg_idx = 0
+        col_idx = 0
+        for _ in xrange(2):
+            for seg_len in self.seg_lens:
+                sum_matrix[seg_idx:(seg_idx + seg_len), col_idx] = 1 / seg_len
+                seg_idx += seg_len
+                col_idx += 1
+        self.pattern_patrix = tf.matmul(distance, sum_matrix)
+        # out = [x,x,x,x,] 变成一维
+        pattern_line = tf.reshape(tf.transpose(self.pattern_matrix), [-1])
+        pattern_out  = tf.Variable(tf.ones([1, pattern_line.shape[0]])) - pattern_line
+        return tf.nn.relu(pattern_out)
 
-        return tf.transpose(tf.matmul(distance, tf.ones([np_data.shape[1], 1])))
+    def init(self):
+        np_ret_holder = tf.placeholder(tf.float32, [None, self.np_ret.shape[1]], name = 'np_ret')
+        np_data_holder, out_layer = self.mk_network()
+        self.loss = tf.reduce_mean(tf.reduce_sum(tf.square(out_layer - np_ret_holder),  
+                                    reduction_indices=[1]))
+        self.train_step = tf.train.GradientDescentOptimizer(0.0001).minimize(self.loss)#梯度下降优化器,减少误差，学习效率0.1  
 
-    def tf_init(self):
-        train_step=tf.train.GradientDescentOptimizer(0.1).minimize(loss)#梯度下降优化器,减少误差，学习效率0.1  
-          
-        #important step  
-        init=tf.global_variables_initializer()  
-        sess=tf.Session()  
-        sess.run(init) 
+        init = tf.global_variables_initializer()  
+        self.sess = tf.Session()  
+        self.sess.run(init)
+
     def run(self):
-        out_layer, np_ret_holder = self.mk_network()
-        loss=tf.reduce_mean(tf.reduce_sum(tf.square(np_ret_holder - out_layer),  
-                   reduction_indices=[1]))
+        self.sess.run(self.train_step, feed_dict = {'np_data': self.np_data, 'np_ret': self.np_ret})
+
+    def loss(self):
+        loss = sess.run(self.loss,feed_dict = {'np_data': self.np_data, 'np_ret': self.np_ret}) #输出误差  
+        return loss
 
 if __name__ == '__main__':
     #make up some real data  
@@ -140,80 +170,3 @@ if __name__ == '__main__':
         y_data[idx - start_idx] = data.ma20[idx]
         #x_.append(data.c[idx - 40:idx])
         #y_.append(data.ma20[idx])
-    #x_data = np.array(x_)
-    #y_data = np.array(y_).resharp((len(y_), 1))
-    
-    #train_step所要输入的值  
-    ys=tf.placeholder(tf.float32,[None, 1], name = 'ys')
-    size = [(start_idx, 10),
-    		#(20, 10),
-    		#(20, 10),
-    		]
-    xs=tf.placeholder(tf.float32,[None, size[0][0]], name = 'xs')
-
-    ###建立第一,二次隐藏层layer  
-    ###add_layer(inputs,in_len,out_len,activation_function=None)
-    l1_mtx = []
-    l1_cnt = 0
-    for sz in size:#[-sz[0]:]
-        #l1_mtx.append(
-        l1, w1, b1 = add_layer(xs, sz[0], sz[1], activation_function=None)#, activation_function=tf.nn.relu))#激励函数(activation_function)ReLU  )
-        l1_cnt += sz[1]
-    #l1 = tf.concat(0, l1_mtx)
-    #prediction = l1
-    prediction, w2, b2 = add_layer(l1, l1_cnt, 1, activation_function=None)
-      
-    #创建损失函数  
-    loss=tf.reduce_mean(tf.reduce_sum(tf.square(ys - prediction),  
-                   reduction_indices=[1]))
-    train_step=tf.train.GradientDescentOptimizer(0.1).minimize(loss)#梯度下降优化器,减少误差，学习效率0.1  
-      
-    #important step  
-    init=tf.global_variables_initializer()  
-    sess=tf.Session()  
-    sess.run(init)  
-
-    #绘图部分  
-    fig=plt.figure()  
-    ax=fig.add_subplot(1,1,1)  
-    #ax.scatter(data.c[start_idx:],y_data)
-    
-    #ax.plot(x_xais, y_data)
-    #ax.plot(x_xais, data.c[start_idx:])
-    ax.plot(range(0, len(data.c)), data.ma20)
-    ax.plot(range(0, len(data.c)), data.c)
-    #ax.scatter(data.ma20[start_idx:],y_data)  
-    plt.ion()#不暂停  
-    plt.show()  
-    plt.pause(1) 
-    #sys.exit(0)
-    #学习1000步  
-    x_xais = range(start_idx, len(data.c))
-    print(sess.run([w1, b1, w2, b2]))
-    for i in range(1000):
-        sess.run(train_step,feed_dict={xs:x_data,ys:y_data})  
-
-        if i%2==0:
-            print('########################################################')
-            lost_value = sess.run(loss,feed_dict={xs:x_data,ys:y_data}) #输出误差  
-            if np.isnan(lost_value):
-                print('lost is nan')
-                break
-            else:
-                print('lost = %f'%lost_value)
-            try:  
-                ax.lines.remove(lines[0])  
-            except Exception:  
-                pass  
-                  
-            prediction_value=sess.run(prediction,feed_dict={xs:x_data})  
-            #lines=ax.plot(x_data,prediction_value,'r',lw=5)  
-            lines=ax.plot(x_xais, prediction_value,'r',lw=5)  
-            plt.pause(1) 
-            w11, b11, w22, b22 = sess.run([w1, b1, w2, b2])
-            print('w1=', w11)
-            print('b1=', b11)
-            print('w2=', w22)
-            print('b1=', b11)
-            #sys.exit(0)
-    plt.ioff()
