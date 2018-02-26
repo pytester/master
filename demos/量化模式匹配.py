@@ -45,9 +45,11 @@ class DATA:
 class PatternNetwork:
 
     in_muti = 3
-    def __init__(self, c_len):# c_len = 243 => 3 ^ 5
+    c_len   = 243
+    def __init__(self, c_len = None):# c_len = 243 => 3 ^ 5
         self.seg_lens = []
-        self.c_len = c_len
+        if c_len == None
+            self.c_len = c_len
         seg_len = float(c_len)
         # 3^4, 3^3, 3^2
         while seg_len > self.in_muti * 3:
@@ -116,8 +118,7 @@ class PatternNetwork:
     # 返回行数为:1, 列数为:len(self.np_data) * len(self.in_sigm_len) * 2的数组
     # 因为每行np_data, 由不同周期的数据组成, 并且包含close与vol
     # 1 - sum((x-w)^2, ...) / seg_len, 1是可变变量
-    @staticmethod
-    def pattern_layer(inputs, np_data):
+    def pattern_layer(self, inputs, np_data):
         distance = tf.square(inputs - tf.constant(np_data))
         # 每个分块分开计算
         sum_matrix = np.zeros([np_data.shape[1], len(self.seg_lens) * 2])
@@ -141,7 +142,7 @@ class PatternNetwork:
                                     reduction_indices=[1]))
         self.train_step = tf.train.GradientDescentOptimizer(0.0001).minimize(self.loss)#梯度下降优化器,减少误差，学习效率0.1  
 
-        init = tf.global_variables_initializer()  
+        init = tf.global_variables_initializer()
         self.sess = tf.Session()  
         self.sess.run(init)
 
@@ -149,13 +150,24 @@ class PatternNetwork:
         self.sess.run(self.train_step, feed_dict = {'np_data': self.np_data, 'np_ret': self.np_ret})
 
     def loss(self):
-        loss = sess.run(self.loss,feed_dict = {'np_data': self.np_data, 'np_ret': self.np_ret}) #输出误差  
+        loss = sess.run(self.loss, feed_dict = {'np_data': self.np_data, 'np_ret': self.np_ret}) #输出误差  
         return loss
 
 def MA(data, N):
     
 class PatternSaver:
-    pass
+    c_len   = 243
+    # code: '600001'
+    def __init__(slef, c, v, code, c_len = None):
+        if c_len == None:
+            self.c_len = c_len
+        self.c = c
+        self.v = v
+        self.code = code
+        self.pos = []
+    def save(self):
+        self.pos = len(self.c) - 1
+
 if __name__ == '__main__':
     #make up some real data  
     data = DATA()
